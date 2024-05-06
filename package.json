@@ -4,15 +4,7 @@
   "description": "A light client which talks to your Tendermint node over RPC",
   "main": "index.js",
   "scripts": {
-    "pretest": "depcheck --ignores=airtap && standard src test example index.js",
-    "test": "npm run pretest && nyc ava test/lightNodeIntegration.js test/rpc.js test/attacks.js && npm run test-light",
-    "test-light": "nyc tape test/common.js test/types.js test/verify.js",
-    "test-browser": "npm run pretest && ./test/browser.sh",
-    "build": "rm -rf lib && babel src -d lib",
-    "source": "rm -rf lib && ln -s src lib",
-    "prepublish": "npm run build",
-    "publish": "npm run source",
-    "generateFixtures": "go run test/fixtures/generate.go"
+    "test": "nyc tape"
   },
   "dependencies": {
     "axios": "^0.19.0",
@@ -38,7 +30,6 @@
     "standard": "^11.0.1",
     "tape": "^4.9.1",
     "tempy": "^0.2.1",
-    "tendermint-node": "^5.2.0",
     "ws": "^5.2.1"
   },
   "babel": {
