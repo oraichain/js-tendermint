@@ -143,12 +143,15 @@ const CanonicalBlockID = {
     let partsHash = Buffer.from(value.parts.hash, "hex");
     buffer[offset] = 0x12;
     buffer[offset + 1] = partsHash.length + 4;
-    buffer[offset + 2] = 0x0a;
-    buffer[offset + 3] = partsHash.length;
-    partsHash.copy(buffer, offset + 4);
-    offset += partsHash.length + 4;
+    buffer[offset + 2] = 0x8; // magic
+    buffer[offset + 3] = 0x01; // magic
+    buffer[offset + 4] = 0x12; // magic
+    buffer[offset + 5] = partsHash.length;
+    partsHash.copy(buffer, offset + 6);
+    offset += partsHash.length + 6;
 
     buffer[offset] = 0x10;
+    console.log("Total", value.parts.total);
     buffer[offset + 1] = value.parts.total;
 
     CanonicalBlockID.encode.bytes = length;
@@ -243,17 +246,23 @@ const CanonicalVote = {
     }
 
     // round field
-    if (Number(vote.round)) {
-      buffer[offset] = 0x19;
-      Int64LE.encode(vote.round, buffer, offset + 1);
-      offset += 9;
-    }
+    // if (Number(vote.round)) {
+    //   buffer[offset] = 0x19;
+    //   Int64LE.encode(vote.round, buffer, offset + 1);
+    //   offset += 9;
+    // }
 
     // block_id field
     if (vote.block_id && vote.block_id.hash) {
       buffer[offset] = 0x22;
       CanonicalBlockID.encode(vote.block_id, buffer, offset + 2);
       buffer[offset + 1] = CanonicalBlockID.encode.bytes;
+      // console.log(
+      //   "BIDABIDO",
+      //   Buffer.from(
+      //     CanonicalBlockID.encode(vote.block_id, buffer, offset + 2)
+      //   ).toString("hex")
+      // );
       offset += CanonicalBlockID.encode.bytes + 2;
     }
 

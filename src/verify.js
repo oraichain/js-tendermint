@@ -7,6 +7,16 @@ const { getBlockHash, getValidatorSetHash } = require("./hash.js");
 const { VarBuffer, CanonicalVote, ArrayPrefix } = require("./types.js");
 const { getAddress } = require("./pubkey.js");
 const { safeParseInt } = require("./common.js");
+const crypto = require("crypto");
+
+function tmhash(data) {
+  const byteArray = Buffer.from(data);
+  const hash = crypto.createHash("sha256");
+  hash.update(byteArray);
+  const hashBytes = hash.digest();
+  // const base64String = hashBytes.toString("base64");
+  return hashBytes.toString("hex");
+}
 
 // gets the serialized representation of a vote, which is used
 // in the commit signatures
@@ -14,13 +24,17 @@ function getVoteSignBytes(chainId, vote) {
   let canonicalVote = Object.assign({}, vote);
   canonicalVote.chain_id = chainId;
   canonicalVote.height = safeParseInt(vote.height);
-  canonicalVote.round = safeParseInt(vote.round);
+  // canonicalVote.round = safeParseInt(vote.round);
+  canonicalVote.block_id.hash = tmhash(canonicalVote.block_id.hash);
   canonicalVote.block_id.parts.total = safeParseInt(vote.block_id.parts.total);
+  canonicalVote.block_id.parts.hash = tmhash(canonicalVote.block_id.parts.hash);
   if (vote.validator_index) {
     canonicalVote.validator_index = safeParseInt(vote.validator_index);
   }
+  console.log("Canonical vote: ", canonicalVote);
+
   let encodedVote = CanonicalVote.encode(canonicalVote);
-  return Buffer.concat([ArrayPrefix, VarBuffer.encode(encodedVote)]);
+  return VarBuffer.encode(encodedVote);
 }
 
 // verifies that a number is a positive integer, less than the
@@ -86,7 +100,12 @@ function verifyCommitSigs(header, commit, validators) {
   const BlockIDFlagCommit = 2;
   const BlockIDFlagNil = 3;
 
+  let validatorIndex = 0;
   for (let cs of commit.signatures) {
+    if (validatorIndex == 0) {
+      validatorIndex++;
+      continue;
+    }
     switch (cs.block_id_flag) {
       case BlockIDFlagAbsent:
       case BlockIDFlagCommit:
@@ -113,7 +132,9 @@ function verifyCommitSigs(header, commit, validators) {
       height: commit.height,
       round: commit.round,
     };
+    console.log(commit.signatures[0]);
     let signBytes = getVoteSignBytes(header.chain_id, vote);
+    console.log("Sign bytes", signBytes.toString("hex"));
     // TODO: support secp256k1 signatures
     let pubKey = Buffer.from(validator.pub_key.value, "base64");
     if (!ed25519.verify(signature, signBytes, pubKey)) {
@@ -122,6 +143,8 @@ function verifyCommitSigs(header, commit, validators) {
 
     // count this validator's voting power
     committedVotingPower += safeParseInt(validator.voting_power);
+
+    validatorIndex++;
   }
 
   // sum all validators' voting power
