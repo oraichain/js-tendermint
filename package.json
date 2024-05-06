@@ -4,7 +4,8 @@
   "description": "A light client which talks to your Tendermint node over RPC",
   "main": "index.js",
   "scripts": {
-    "test": "nyc tape"
+    "test": "nyc tape",
+    "build": "rm -rf lib && babel src -d lib"
   },
   "dependencies": {
     "axios": "^0.19.0",
