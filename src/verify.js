@@ -8,6 +8,17 @@ const { VarBuffer, CanonicalVote, ArrayPrefix } = require("./types.js");
 const { getAddress } = require("./pubkey.js");
 const { safeParseInt } = require("./common.js");
 const crypto = require("crypto");
+const CryptoJS = require("crypto-js");
+
+function base64ToHex(base64String) {
+  // Decode base64 string
+  const bytes = CryptoJS.enc.Base64.parse(base64String);
+
+  // Convert to hex
+  const hexString = bytes.toString(CryptoJS.enc.Hex);
+
+  return hexString;
+}
 
 function tmhash(data) {
   const byteArray = Buffer.from(data);
@@ -102,10 +113,6 @@ function verifyCommitSigs(header, commit, validators) {
 
   let validatorIndex = 0;
   for (let cs of commit.signatures) {
-    if (validatorIndex == 0) {
-      validatorIndex++;
-      continue;
-    }
     switch (cs.block_id_flag) {
       case BlockIDFlagAbsent:
       case BlockIDFlagCommit:
@@ -132,13 +139,23 @@ function verifyCommitSigs(header, commit, validators) {
       height: commit.height,
       round: commit.round,
     };
-    console.log(commit.signatures[0]);
+    if (cs.timestamp !== vote.timestamp) {
+      throw new Error("Timestamp not match!");
+    }
     let signBytes = getVoteSignBytes(header.chain_id, vote);
     console.log("Sign bytes", signBytes.toString("hex"));
     // TODO: support secp256k1 signatures
     let pubKey = Buffer.from(validator.pub_key.value, "base64");
+    console.log(
+      "Pubkey:",
+      base64ToHex(validator.pub_key.value),
+      "Signature:",
+      base64ToHex(cs.signature)
+    );
     if (!ed25519.verify(signature, signBytes, pubKey)) {
       throw Error("Invalid signature");
+    } else {
+      console.log("yup");
     }
 
     // count this validator's voting power

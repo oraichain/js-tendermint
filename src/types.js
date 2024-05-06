@@ -246,11 +246,11 @@ const CanonicalVote = {
     }
 
     // round field
-    // if (Number(vote.round)) {
-    //   buffer[offset] = 0x19;
-    //   Int64LE.encode(vote.round, buffer, offset + 1);
-    //   offset += 9;
-    // }
+    if (Number(vote.round)) {
+      buffer[offset] = 0x19;
+      Int64LE.encode(vote.round, buffer, offset + 1);
+      offset += 9;
+    }
 
     // block_id field
     if (vote.block_id && vote.block_id.hash) {
