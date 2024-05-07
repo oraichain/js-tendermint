@@ -36,9 +36,9 @@ function getVoteSignBytes(chainId, vote) {
   canonicalVote.chain_id = chainId;
   canonicalVote.height = safeParseInt(vote.height);
   // canonicalVote.round = safeParseInt(vote.round);
-  canonicalVote.block_id.hash = tmhash(canonicalVote.block_id.hash);
+  // canonicalVote.block_id.hash = tmhash(canonicalVote.block_id.hash);
   canonicalVote.block_id.parts.total = safeParseInt(vote.block_id.parts.total);
-  canonicalVote.block_id.parts.hash = tmhash(canonicalVote.block_id.parts.hash);
+  // canonicalVote.block_id.parts.hash = tmhash(canonicalVote.block_id.parts.hash);
   if (vote.validator_index) {
     canonicalVote.validator_index = safeParseInt(vote.validator_index);
   }
