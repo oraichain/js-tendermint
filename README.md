@@ -2,11 +2,12 @@
 
 A light client for Tendermint blockchains which works in Node.js and browsers.
 
-Supports Tendermint v0.33.
+Supports Tendermint v0.34 powered by Oraichain Labs.
 
 **NOTICE:** This library has not undergone any kind of security review, so think twice before using it to secure any real value.
 
 ### Usage
+
 ```
 npm install tendermint
 ```
@@ -71,13 +72,12 @@ node.state()
 Simple client to make RPC requests to nodes
 
 ```js
-let { RpcClient } = require('tendermint')
+let { RpcClient } = require("tendermint");
 
-let client = RpcClient('ws://localhost:26657')
+let client = RpcClient("ws://localhost:26657");
 
 // request a block
-client.block({ height: 100 })
-  .then((res) => console.log(res))
+client.block({ height: 100 }).then((res) => console.log(res));
 ```
 
 The following RPC methods are available:
