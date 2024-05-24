@@ -181,18 +181,17 @@ const PubKey = {
     if (pub == null) {
       buffer[offset] = 0;
     } else {
-      pubkeyAminoPrefix.copy(buffer, offset);
-      Buffer.from(pub.value, "base64").copy(
-        buffer,
-        offset + pubkeyAminoPrefix.length
-      );
+      buffer[offset] = 0x0a;
+      buffer[offset + 1] =
+        Buffer.from(pub.value, "base64").toString("hex").length / 2;
+      Buffer.from(pub.value, "base64").copy(buffer, offset + 2);
     }
     PubKey.encode.bytes = length;
     return buffer;
   },
   encodingLength(pub) {
     if (pub == null) return 1;
-    return 37;
+    return 2 + Buffer.from(pub.value, "base64").toString("hex").length / 2;
   },
 };
 
@@ -206,20 +205,16 @@ const ValidatorHashInput = {
 
     // pubkey field
     buffer[0] = 0x0a;
-    buffer[1] = 0x25;
+    buffer[1] = PubKey.encodingLength(validator.pub_key);
     PubKey.encode(validator.pub_key, buffer, 2);
-
-    // TODO: handle pubkeys of different length
-
-    // voting power field
-    buffer[39] = 0x10;
-    UVarInt.encode(validator.voting_power, buffer, 40);
+    buffer[36] = 0x10;
+    UVarInt.encode(validator.voting_power, buffer, 37);
 
     ValidatorHashInput.encode.bytes = length;
     return buffer;
   },
   encodingLength(validator) {
-    return 40 + UVarInt.encodingLength(validator.voting_power);
+    return 37 + UVarInt.encodingLength(validator.voting_power);
   },
 };
 

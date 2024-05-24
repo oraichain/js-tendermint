@@ -108,5 +108,6 @@ module.exports = {
   getBlockHash,
   getValidatorSetHash,
   sha256,
+  treeHash,
   tmhash,
 };
