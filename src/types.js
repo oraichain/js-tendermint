@@ -129,7 +129,7 @@ const CanonicalBlockID = {
   encode(value, buffer, offset = 0) {
     let length = CanonicalBlockID.encodingLength(value);
     buffer = buffer || Buffer.alloc(length);
-    console.log("Value", value);
+    // console.log("Value", value);
 
     // TODO: actually do amino encoding stuff
 
@@ -152,7 +152,7 @@ const CanonicalBlockID = {
     offset += partsHash.length + 6;
 
     buffer[offset] = 0x10;
-    console.log("Total", value.parts.total);
+    // console.log("Total", value.parts.total);
     buffer[offset + 1] = value.parts.total;
 
     CanonicalBlockID.encode.bytes = length;

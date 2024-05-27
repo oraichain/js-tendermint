@@ -5,9 +5,9 @@ const { getValidatorSetHash, treeHash } = require("../lib/hash.js");
 let { verifyCommit, getVoteSignBytes } = require("../lib/verify.js");
 const { ValidatorHashInput } = require("../src/types.js");
 let randomBytes = require("crypto").pseudoRandomBytes;
-console.log(
-  new Array(32).fill(0).map((item) => randomBytes(32).toString("hex"))
-);
+// console.log(
+//   new Array(32).fill(0).map((item) => randomBytes(32).toString("hex"))
+// );
 // let { getAddress } = require('../lib/pubkey.js');
 // let { getValidatorSetHash, getBlockHash } = require('../lib/hash.js');
 
@@ -87,9 +87,9 @@ console.log(
 //     }
 //   ]
 // };
-const { validators, header, commit } = require("./data.json");
-// verifyCommit(header, commit, validators);
-console.log(getValidatorSetHash(validators));
+const { validators, header, commit } = require("./new_data.json");
+verifyCommit(header, commit, validators);
+// console.log(getValidatorSetHash(validators));
 
 // console.log(validators.map((v) => v.address));
 // console.log(commit.signatures.map((c) => c.validator_address));

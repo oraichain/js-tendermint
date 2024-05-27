@@ -1,14 +1,14 @@
-'use strict';
+"use strict";
 
-const stringify = require('json-stable-stringify');
-const ed25519 = require('supercop.js');
+const stringify = require("json-stable-stringify");
+const ed25519 = require("supercop.js");
 // TODO: try to load native ed25519 implementation, fall back to supercop.js
-const { getBlockHash, getValidatorSetHash } = require('./hash.js');
-const { VarBuffer, CanonicalVote, ArrayPrefix } = require('./types.js');
-const { getAddress } = require('./pubkey.js');
-const { safeParseInt } = require('./common.js');
-const crypto = require('crypto');
-const CryptoJS = require('crypto-js');
+const { getBlockHash, getValidatorSetHash } = require("./hash.js");
+const { VarBuffer, CanonicalVote, ArrayPrefix } = require("./types.js");
+const { getAddress } = require("./pubkey.js");
+const { safeParseInt } = require("./common.js");
+const crypto = require("crypto");
+const CryptoJS = require("crypto-js");
 
 function base64ToHex(base64String) {
   // Decode base64 string
@@ -22,11 +22,11 @@ function base64ToHex(base64String) {
 
 function tmhash(data) {
   const byteArray = Buffer.from(data);
-  const hash = crypto.createHash('sha256');
+  const hash = crypto.createHash("sha256");
   hash.update(byteArray);
   const hashBytes = hash.digest();
   // const base64String = hashBytes.toString("base64");
-  return hashBytes.toString('hex');
+  return hashBytes.toString("hex");
 }
 
 // gets the serialized representation of a vote, which is used
@@ -42,7 +42,7 @@ function getVoteSignBytes(chainId, vote) {
   if (vote.validator_index) {
     canonicalVote.validator_index = safeParseInt(vote.validator_index);
   }
-  console.log('Canonical vote: ', canonicalVote);
+  // console.log("Canonical vote: ", canonicalVote);
 
   let encodedVote = CanonicalVote.encode(canonicalVote);
   return VarBuffer.encode(encodedVote);
@@ -52,13 +52,13 @@ function getVoteSignBytes(chainId, vote) {
 // maximum safe JS integer
 function verifyPositiveInt(n) {
   if (!Number.isInteger(n)) {
-    throw Error('Value must be an integer');
+    throw Error("Value must be an integer");
   }
   if (n > Number.MAX_SAFE_INTEGER) {
-    throw Error('Value must be < 2^53');
+    throw Error("Value must be < 2^53");
   }
   if (n < 0) {
-    throw Error('Value must be >= 0');
+    throw Error("Value must be >= 0");
   }
 }
 
@@ -70,24 +70,26 @@ function verifyCommit(header, commit, validators) {
   let blockHash = getBlockHash(header);
   console.log(blockHash);
   if (blockHash !== commit.block_id.hash) {
-    throw Error('Commit does not match block hash');
+    throw Error("Commit does not match block hash");
   }
 
   let countedValidators = new Set();
 
   for (let signature of commit.signatures) {
     // ensure there are never multiple signatures from a single validator
-    let validator_address = signature.validator_address;
-    if (countedValidators.has(validator_address)) {
-      throw Error('Validator has multiple signatures');
+    if (signature.validator_address) {
+      let validator_address = signature.validator_address;
+      if (countedValidators.has(validator_address)) {
+        throw Error("Validator has multiple signatures");
+      }
+      countedValidators.add(signature.validator_address);
     }
-    countedValidators.add(signature.validator_address);
   }
 
   // ensure this signature references at least one validator
   let validator = validators.find((v) => countedValidators.has(v.address));
   if (!validator) {
-    throw Error('No recognized validators have signatures');
+    throw Error("No recognized validators have signatures");
   }
 
   verifyCommitSigs(header, commit, validators);
@@ -112,6 +114,7 @@ function verifyCommitSigs(header, commit, validators) {
   const BlockIDFlagNil = 3;
 
   let validatorIndex = 0;
+  let index = 0;
   for (let cs of commit.signatures) {
     switch (cs.block_id_flag) {
       case BlockIDFlagAbsent:
@@ -131,49 +134,70 @@ function verifyCommitSigs(header, commit, validators) {
     // validator sets)
     if (!validator) continue;
 
-    let signature = Buffer.from(cs.signature, 'base64');
+    let signature = Buffer.from(cs.signature, "base64");
     let vote = {
       type: PrecommitType,
       timestamp: cs.timestamp,
-      block_id: header.last_block_id,
+      block_id: commit.block_id,
       height: commit.height,
-      round: commit.round
+      round: commit.round,
     };
     if (cs.timestamp !== vote.timestamp) {
-      throw new Error('Timestamp not match!');
+      throw new Error("Timestamp not match!");
     }
     let signBytes = getVoteSignBytes(header.chain_id, vote);
-    console.log('Sign bytes', signBytes.toString('hex'));
+    // console.log("Sign bytes", signBytes.toString("hex"));
     // TODO: support secp256k1 signatures
-    let pubKey = Buffer.from(validator.pub_key.value, 'base64');
-    console.log('Pubkey:', base64ToHex(validator.pub_key.value), 'Signature:', base64ToHex(cs.signature));
-    if (!ed25519.verify(signature, signBytes, pubKey)) {
-      throw Error('Invalid signature');
-    } else {
-      console.log('yup');
+    let pubKey = Buffer.from(validator.pub_key.value, "base64");
+    // console.log(
+    //   "Pubkey:",
+    //   base64ToHex(validator.pub_key.value),
+    //   "Signature:",
+    //   base64ToHex(cs.signature)
+    // );
+    // console.log(ed25519.verify(signature, signBytes, pubKey));
+    if (ed25519.verify(signature, signBytes, pubKey)) {
+      index++;
+      committedVotingPower += safeParseInt(validator.voting_power);
+      let totalVotingPower = validators.reduce(
+        (sum, v) => sum + safeParseInt(v.voting_power),
+        0
+      );
+      let twoThirds = Math.ceil((totalVotingPower * 2) / 3);
+      if (committedVotingPower > twoThirds) {
+        console.log(index);
+        console.log("DONE COMMITTED VALIDATOR VOTING POWER");
+        break;
+      }
     }
 
     // count this validator's voting power
-    committedVotingPower += safeParseInt(validator.voting_power);
 
     validatorIndex++;
   }
 
+  console.log("AJSDJASDJKSAKLD", committedVotingPower);
+
   // sum all validators' voting power
-  let totalVotingPower = validators.reduce((sum, v) => sum + safeParseInt(v.voting_power), 0);
+  let totalVotingPower = validators.reduce(
+    (sum, v) => sum + safeParseInt(v.voting_power),
+    0
+  );
   // JS numbers have no loss of precision up to 2^53, but we
   // error at over 2^52 since we have to do arithmetic. apps
   // should be able to keep voting power lower than this anyway
   if (totalVotingPower > 2 ** 52) {
-    throw Error('Total voting power must be less than 2^52');
+    throw Error("Total voting power must be less than 2^52");
   }
 
   // verify enough voting power signed
   let twoThirds = Math.ceil((totalVotingPower * 2) / 3);
   if (committedVotingPower < twoThirds) {
-    let error = Error('Not enough committed voting power');
+    let error = Error("Not enough committed voting power");
     error.insufficientVotingPower = true;
     throw error;
+  } else {
+    console.log("DONE COMMITTED VALIDATOR VOTING POWER");
   }
 }
 
@@ -182,19 +206,19 @@ function verifyCommitSigs(header, commit, validators) {
 function verifyValidatorSet(validators, expectedHash) {
   for (let validator of validators) {
     if (getAddress(validator.pub_key) !== validator.address) {
-      throw Error('Validator address does not match pubkey');
+      throw Error("Validator address does not match pubkey");
     }
 
     validator.voting_power = safeParseInt(validator.voting_power);
     verifyPositiveInt(validator.voting_power);
     if (validator.voting_power === 0) {
-      throw Error('Validator voting power must be > 0');
+      throw Error("Validator voting power must be > 0");
     }
   }
 
   let validatorSetHash = getValidatorSetHash(validators);
   if (expectedHash != null && validatorSetHash !== expectedHash) {
-    throw Error('Validator set does not match what we expected');
+    throw Error("Validator set does not match what we expected");
   }
 }
 
@@ -207,15 +231,16 @@ function verify(oldState, newState) {
   let newValidators = newState.validators;
 
   if (newHeader.chain_id !== oldHeader.chain_id) {
-    throw Error('Chain IDs do not match');
+    throw Error("Chain IDs do not match");
   }
   if (newHeader.height <= oldHeader.height) {
-    throw Error('New state height must be higher than old state height');
+    throw Error("New state height must be higher than old state height");
   }
 
-  let validatorSetChanged = newHeader.validators_hash !== oldHeader.validators_hash;
+  let validatorSetChanged =
+    newHeader.validators_hash !== oldHeader.validators_hash;
   if (validatorSetChanged && newValidators == null) {
-    throw Error('Must specify new validator set');
+    throw Error("Must specify new validator set");
   }
 
   // make sure new header has a valid commit
@@ -247,5 +272,5 @@ Object.assign(module.exports, {
   verifyCommitSigs,
   verifyValidatorSet,
   verify,
-  getVoteSignBytes
+  getVoteSignBytes,
 });
